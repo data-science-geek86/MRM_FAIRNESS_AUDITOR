@@ -43,7 +43,7 @@ class KMeansBinning(BinningStrategy):
         
         # Calculate midpoints between centroids to act as boundary edges
         midpoints = (centroids[:-1] + centroids[1:]) / 2
-        return np.array([data.min(), *midpoints, data.max()])
+        return np.array([-np.inf, *midpoints, np.inf])
 
 class DecisionTreeBinning(BinningStrategy):
     @staticmethod
