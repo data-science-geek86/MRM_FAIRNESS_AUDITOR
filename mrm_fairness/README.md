@@ -2,7 +2,7 @@
 
 Welcome to the **Bias Audit & Fairness Assessment Engine** documentation. This library delivers an automated, data-driven framework designed to audit, quantify, and visualize statistical disparities and potential biases across demographic subgroups within datasets or model predictions.
 
-By leveraging the **Population Stability Index (PSI)** alongside customizable statistical partitioning strategies, this engine surfaces structural imbalances relative to a designated baseline reference group.
+By leveraging the **Group Stability Index (GSI)** alongside customizable statistical binning/partitioning strategies, this engine surfaces structural imbalances relative to a designated baseline reference group.
 
 
 ## 📦 Installation Guide: Bias Audit & Fairness Engine
@@ -47,31 +47,31 @@ pip install git+https://github.com/data-science-geek86/MRM_FAIRNESS.git#subdirec
 
 ---
 
-## 🔬 Core Methodology (PSI Calculation)
+## 🔬 Core Methodology (GSI Calculation)
 
-The engine utilizes the **Population Stability Index (PSI)** to quantify representation disparities. Originally designed to monitor population shifts over time, it is adapted here to measure systemic bias by tracking distributional differences between a designated **Reference Group** ($R$) and a **Comparison Group** ($C$).
+The engine utilizes the **Group Stability Index (GSI)** to quantify representation disparities. Originally designed to monitor population shifts over time, it is adapted here to measure systemic bias by tracking distributional differences between a designated **Reference Group** ($R$) and a **Comparison Group** ($C$).
 
 For any given attribute divided into $k$ discrete bins, the index contribution for an individual bin $i$ is calculated as:
 
 
-$$\text{PSI}_i = (C_i - R_i) \times \ln\left(\frac{C_i}{R_i}\right)$$
+$$\text{GSI}_i = (C_i - R_i) \times \ln\left(\frac{C_i}{R_i}\right)$$
 
 
-The **Global PSI** for that feature is the sum of all bin-level contributions:
+The **Global GSI** for that feature is the sum of all bin-level contributions:
 
 
-$$\text{PSI} = \sum_{i=1}^{k} \left( (C_i - R_i) \times \ln\left(\frac{C_i}{R_i}\right) \right)$$
+$$\text{GSI} = \sum_{i=1}^{k} \left( (C_i - R_i) \times \ln\left(\frac{C_i}{R_i}\right) \right)$$
 
 
 ### 🚦 Thresholds and Actions
 
 The calculated global score is mapped to actionable fairness tiers:
 
-| PSI Score Range | Fairness Status | Recommended Action |
+| GSI Score Range | Fairness Status | Recommended Action |
 | :--- | :--- | :--- |
-| **$\text{PSI} < 0.10$** | 🟢 Fair / Minimal Disparity | Acceptable stability profile. No adjustments required. |
-| **$0.10 \le \text{PSI} < 0.25$** | 🟡 Mild Bias / Moderate Disparity | Monitor carefully over time. Minor deviations detected. |
-| **$\text{PSI} \ge 0.25$** | 🔴 Significant Bias / High Disparity | **Action Required!** Mitigate underlying bias dependencies. |
+| **$\text{GSI} < 0.10$** | 🟢 Fair / Minimal Disparity | Acceptable stability profile. No adjustments required. |
+| **$0.10 \le \text{GSI} < 0.25$** | 🟡 Mild Bias / Moderate Disparity | Monitor carefully over time. Minor deviations detected. |
+| **$\text{GSI} \ge 0.25$** | 🔴 Significant Bias / High Disparity | **Action Required!** Mitigate underlying bias dependencies. |
 
 ---
 
@@ -108,10 +108,10 @@ The `BiasAuditor` class serves as the central orchestration hub. It performs dat
 * Validates that the sensitive attribute exists and contains the specified baseline group.
 * Uses `epsilon` as an anti-zero adjustment factor to handle empty bins gracefully.
 
-#### `calculate_psi(target_cols, binning_method='equal_frequency', num_bins=10, dt_target_col=None)`
+#### `calculate_gsi(target_cols, binning_method='equal_frequency', num_bins=10, dt_target_col=None)`
 * Executes the multi-group disparity calculations.
 * **Returns:** A `Tuple` containing two pandas DataFrames:
-    1. **Summary Table:** A high-level overview mapping each target column to its global PSI, fairness tier, and recommended action.
+    1. **Summary Table:** A high-level overview mapping each target column to its global GSI, fairness tier, and recommended action.
     2. **Granular Table:** A comprehensive bin-by-bin breakdown showing raw probability weights and individual index contributions.
 
 ---
@@ -152,7 +152,7 @@ df.loc[df['demographic_group'] == 'Group_C', 'credit_score'] -= 45
 auditor = BiasAuditor(df=df, protected_attribute='demographic_group', reference_group='Group_A')
 
 # 3. Compute metrics using KMeans partitioning
-summary_df, granular_df = auditor.calculate_psi(
+summary_df, granular_df = auditor.calculate_gsi(
     target_cols=['credit_score'],
     binning_method='kmeans',
     num_bins=5
@@ -160,7 +160,7 @@ summary_df, granular_df = auditor.calculate_psi(
 
 # 4. Display high-level fairness findings
 print("=== GLOBAL FAIRNESS RESULTS ===")
-print(summary_df[['Comparison Group', 'Target Feature/Prediction', 'PSI Value', 'Fairness Status']])
+print(summary_df[['Comparison Group', 'Target Feature/Prediction', 'GSI Value', 'Fairness Status']])
 
 # 5. Render interactive distribution plots
 BiasVisualizer.plot_granular_distribution(granular_df, target_feature='credit_score')

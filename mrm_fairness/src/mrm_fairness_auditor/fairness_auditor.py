@@ -87,7 +87,7 @@ class BiasAuditor:
         if self.reference_group not in self.df[self.protected_attribute].unique():
             raise ValueError(f"Reference group '{self.reference_group}' missing from dataset.")
 
-    def calculate_psi(
+    def calculate_gsi(
         self, 
         target_cols: List[str], 
         binning_method: str = 'equal_frequency', 
@@ -95,7 +95,7 @@ class BiasAuditor:
         dt_target_col: str = None
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
-        Calculates Global PSI and outputs Granular Bin-Level Tables.
+        Calculates Global GSI and outputs Granular Bin-Level Tables.
         """
         strategy = BINNING_MAPPING.get(binning_method.lower())
         if not strategy:
@@ -166,7 +166,7 @@ class BiasAuditor:
                         "Bin Range/Value": b_label,
                         "Reference Probability": ref_probs[idx],
                         "Comparison Probability": comp_probs[idx],
-                        "PSI Contribution": bin_psi_contrib[idx]
+                        "GSI Contribution": bin_psi_contrib[idx]
                     })
                 
                 # Interpretation logic definitions
@@ -182,7 +182,7 @@ class BiasAuditor:
                     "Reference Group": self.reference_group,
                     "Comparison Group": comp_group,
                     "Target Feature/Prediction": col,
-                    "PSI Value": total_psi,
+                    "GSI Value": total_psi,
                     "Fairness Status": status,
                     "Recommended Action": action
                 })
