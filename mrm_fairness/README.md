@@ -97,11 +97,11 @@ An adaptive, supervised partitioning scheme that fits a shallow decision tree ag
 
 ---
 
-## ⚙️ 2. The Core Engine (`BiasAuditor`)
+## ⚙️ 2. The Core Engine (`DistributionFairnessAuditor`)
 
-The `BiasAuditor` class serves as the central orchestration hub. It performs data validation, isolates demographic groups, runs the selected binning strategies, and applies mathematical smoothing to prevent division-by-zero errors.
+The `DistributionFairnessAuditor` class serves as the central orchestration hub. It performs data validation, isolates demographic groups, runs the selected binning strategies, and applies mathematical smoothing to prevent division-by-zero errors.
 
-### Key Class Methods
+### 2.1 Key Class Methods
 
 #### `__init__(df, protected_attribute, reference_group, epsilon=1e-4)`
 * Initializes the auditing pipeline.
@@ -116,17 +116,17 @@ The `BiasAuditor` class serves as the central orchestration hub. It performs dat
 
 ---
 
-## 📊 3. Interactive Visualizations (`BiasVisualizer`)
+### 📊 2.2 Interactive Visualizations (`BiasVisualizer`)
 
 Raw audit metrics can be difficult to fully comprehend without visual context. The `BiasVisualizer` class integrates directly with Plotly to render diagnostic subplots.
 
-### `plot_granular_distribution(granular_df, target_feature)`
-* Accepts the granular data frame generated directly by `BiasAuditor`.
+#### `plot_granular_distribution(granular_df, target_feature)`
+* Accepts the granular data frame generated directly by `DistributionFairnessAuditor`.
 * Automatically renders aligned, multi-row bar charts contrasting the baseline reference distribution against each comparison cohort side-by-side.
 
 ---
 
-## 🚀 4. Quickstart Guide & Example
+### 🚀 2.3 Quickstart Guide & Example
 
 The following self-contained script shows how to implement a complete bias assessment pipeline using synthetic credit data.
 
@@ -149,7 +149,7 @@ df = pd.DataFrame(mock_data)
 df.loc[df['demographic_group'] == 'Group_C', 'credit_score'] -= 45
 
 # 2. Instantiate the auditor specifying Group_A as the baseline
-auditor = BiasAuditor(df=df, protected_attribute='demographic_group', reference_group='Group_A')
+auditor = DistributionFairnessAuditor(df=df, protected_attribute='demographic_group', reference_group='Group_A')
 
 # 3. Compute metrics using KMeans partitioning
 summary_df, granular_df = auditor.calculate_gsi(
@@ -166,3 +166,7 @@ print(summary_df[['Comparison Group', 'Target Feature/Prediction', 'GSI Value', 
 BiasVisualizer.plot_granular_distribution(granular_df, target_feature='credit_score')
 
 ```
+
+## ⚙️ 3. The Core Engine (`OutcomeFairnessAuditor`)
+
+`OutcomeFairnessAuditor` is an experimental fairness auditor inspired from `Fairlearn` package.

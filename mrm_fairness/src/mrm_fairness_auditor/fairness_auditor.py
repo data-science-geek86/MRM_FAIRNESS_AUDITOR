@@ -73,7 +73,7 @@ BINNING_MAPPING = {
 # 2. CORE BIAS EVALUATION ENGINE
 # =====================================================================
 
-class BiasAuditor:
+class DistributionFairnessAuditor:
     def __init__(self, df: pd.DataFrame, protected_attribute: str, reference_group: Any, epsilon: float = 1e-4):
         self.df = df.copy()
         self.protected_attribute = protected_attribute
@@ -87,7 +87,7 @@ class BiasAuditor:
         if self.reference_group not in self.df[self.protected_attribute].unique():
             raise ValueError(f"Reference group '{self.reference_group}' missing from dataset.")
 
-    def calculate_gsi(
+    def run_gsi_audit(
         self, 
         target_cols: List[str], 
         binning_method: str = 'equal_frequency', 
@@ -193,7 +193,7 @@ class BiasAuditor:
 # 3. VISUALIZATION COMPONENT
 # =====================================================================
 
-class BiasVisualizer:
+class DistributionFairnessVisualizer:
     @staticmethod
     def plot_granular_distribution(granular_df: pd.DataFrame, target_feature: str):
         """Generates clear interactive subplots contrasting distributions across bins."""
@@ -224,3 +224,106 @@ class BiasVisualizer:
             barmode='group', height=350 * len(groups), template="plotly_white"
         )
         fig.show()
+        
+        
+        
+import numpy as np
+import pandas as pd
+from typing import List, Dict, Any, Tuple
+# Import Fairlearn metrics engine components
+from fairlearn.metrics import MetricFrame, selection_rate, demographic_parity_difference, equalized_odds_difference
+from sklearn.metrics import accuracy_score, precision_score, recall_score
+
+# =====================================================================
+# AUTOMATED FAIRNESS DECISION MANAGEMENT ENGINE
+# =====================================================================
+
+class OutcomeFairnessAuditor:
+    """
+    Automated decision hub wrapping Fairlearn and structural metrics 
+    to evaluate data, model predictions, and trigger compliance outcomes.
+    """
+    def __init__(
+        self, 
+        df: pd.DataFrame, 
+        protected_attribute: str, 
+        reference_group: Any,
+        threshold_demographic_parity: float = 0.10,
+        threshold_equalized_odds: float = 0.10
+    ):
+        self.df = df.copy()
+        self.protected_attribute = protected_attribute
+        self.reference_group = reference_group
+        
+        # Operational policy thresholds for automated decisions
+        self.th_dp = threshold_demographic_parity
+        self.th_eo = threshold_equalized_odds
+
+    def run_fairlearn_audit(
+        self, 
+        y_true_col: str, 
+        y_pred_col: str
+    ) -> Dict[str, Any]:
+        """
+        Executes automated outcome checks using Fairlearn's MetricFrame wrapper.
+        """
+        # Ensure data integrity for validation columns
+        audit_df = self.df[[self.protected_attribute, y_true_col, y_pred_col]].dropna()
+        
+        y_true = audit_df[y_true_col].astype(int)
+        y_pred = audit_df[y_pred_col].astype(int)
+        sensitive_features = audit_df[self.protected_attribute]
+
+        # 1. Compute multi-metric breakdown grouped by protected attributes
+        metrics_dict = {
+            'accuracy': accuracy_score,
+            'precision': precision_score,
+            'recall': recall_score,
+            'selection_rate': selection_rate
+        }
+        
+        metric_frame = MetricFrame(
+            metrics=metrics_dict,
+            y_true=y_true,
+            y_pred=y_pred,
+            sensitive_features=sensitive_features
+        )
+
+        # 2. Extract global macro disparities across groups
+        dp_diff = demographic_parity_difference(
+            y_true=y_true,
+            y_pred=y_pred, 
+            sensitive_features=sensitive_features
+        )
+        
+        eo_diff = equalized_odds_difference(
+            y_true=y_true, 
+            y_pred=y_pred, 
+            sensitive_features=sensitive_features
+        )
+
+        # 3. Generate the Automated Compliance Decision Logic
+        decision_status = "PASSED"
+        reasons = []
+
+        if dp_diff > self.th_dp:
+            decision_status = "FAILED"
+            reasons.append(f"Demographic Parity Disparity ({dp_diff:.4f}) exceeds threshold ({self.th_dp})")
+            
+        if eo_diff > self.th_eo:
+            # If it hasn't failed entirely yet, step down status or fail based on strict criteria
+            decision_status = "FAILED"
+            reasons.append(f"Equalized Odds Disparity ({eo_diff:.4f}) exceeds threshold ({self.th_eo})")
+
+        # Fallback tracking criteria to monitor minor issues
+        if decision_status == "PASSED" and (dp_diff > self.th_dp * 0.7 or eo_diff > self.th_eo * 0.7):
+            decision_status = "WARNING / MONITOR"
+            reasons.append("Disparities approaching maximum boundary limits.")
+
+        return {
+            "group_metrics_table": metric_frame.by_group,
+            "demographic_parity_difference": dp_diff,
+            "equalized_odds_difference": eo_diff,
+            "automated_decision": decision_status,
+            "compliance_notes": reasons if reasons else ["All metrics within safe margins."]
+        }
