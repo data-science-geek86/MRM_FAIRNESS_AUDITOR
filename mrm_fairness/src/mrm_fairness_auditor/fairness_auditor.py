@@ -86,6 +86,37 @@ class DistributionFairnessAuditor:
             raise ValueError(f"Column '{self.protected_attribute}' not found.")
         if self.reference_group not in self.df[self.protected_attribute].unique():
             raise ValueError(f"Reference group '{self.reference_group}' missing from dataset.")
+            
+    def psi_core_logic(col, is_numeric, edges, ref_data):
+        
+        comp_data = self.df[self.df[self.protected_attribute] == comp_group][col].dropna().values
+        if len(comp_data) == 0: 
+            continue
+        
+        # --- Map to distributions ---
+        if not is_numeric:
+            ref_counts = pd.Series(ref_data).value_counts(normalize=False).reindex(edges, fill_value=0)
+            comp_counts = pd.Series(comp_data).value_counts(normalize=False).reindex(edges, fill_value=0)
+        else:
+            ref_counts, _ = np.histogram(ref_data, bins=edges)
+            comp_counts, _ = np.histogram(comp_data, bins=edges)
+        
+        # Compute probabilities
+        ref_probs = ref_counts / len(ref_data)
+        comp_probs = comp_counts / len(comp_data)
+
+        # Apply anti-zero division adjustments
+        ref_probs = np.where(ref_probs == 0, self.epsilon, ref_probs)
+        comp_probs = np.where(comp_probs == 0, self.epsilon, comp_probs)
+        ref_probs /= np.sum(ref_probs)
+        comp_probs /= np.sum(comp_probs)
+
+        # Element-wise contribution calculations
+        bin_psi_contrib = (comp_probs - ref_probs) * np.log(comp_probs / ref_probs)
+        total_psi = np.sum(bin_psi_contrib)
+        return(ref_probs, comp_probs, bin_psi_contrib, total_psi)
+        
+
 
     def run_gsi_audit(
         self, 
@@ -119,8 +150,8 @@ class DistributionFairnessAuditor:
             # --- Establish Bin Definitions ---
             if not is_numeric:
                 # Categorical alignment
-                all_cats = self.df[col].dropna().unique()
-                bin_labels = [str(cat) for cat in all_cats]
+                edges = self.df[col].dropna().unique()
+                bin_labels = [str(cat) for cat in edges]
             else:
                 # Continuous binning matching selection pattern
                 target_y = ref_df[dt_target_col].values if dt_target_col else None
@@ -132,31 +163,33 @@ class DistributionFairnessAuditor:
 
             # Evaluate against each comparison demographics pocket
             for comp_group in comp_groups:
-                comp_data = self.df[self.df[self.protected_attribute] == comp_group][col].dropna().values
-                if len(comp_data) == 0: 
-                    continue
+                # comp_data = self.df[self.df[self.protected_attribute] == comp_group][col].dropna().values
+                # if len(comp_data) == 0: 
+                    # continue
                 
-                # --- Map to distributions ---
-                if not is_numeric:
-                    ref_counts = pd.Series(ref_data).value_counts(normalize=False).reindex(all_cats, fill_value=0)
-                    comp_counts = pd.Series(comp_data).value_counts(normalize=False).reindex(all_cats, fill_value=0)
-                else:
-                    ref_counts, _ = np.histogram(ref_data, bins=edges)
-                    comp_counts, _ = np.histogram(comp_data, bins=edges)
+                # # --- Map to distributions ---
+                # if not is_numeric:
+                    # ref_counts = pd.Series(ref_data).value_counts(normalize=False).reindex(edges, fill_value=0)
+                    # comp_counts = pd.Series(comp_data).value_counts(normalize=False).reindex(edges, fill_value=0)
+                # else:
+                    # ref_counts, _ = np.histogram(ref_data, bins=edges)
+                    # comp_counts, _ = np.histogram(comp_data, bins=edges)
                 
-                # Compute probabilities
-                ref_probs = ref_counts / len(ref_data)
-                comp_probs = comp_counts / len(comp_data)
+                # # Compute probabilities
+                # ref_probs = ref_counts / len(ref_data)
+                # comp_probs = comp_counts / len(comp_data)
                 
-                # Apply anti-zero division adjustments
-                ref_probs = np.where(ref_probs == 0, self.epsilon, ref_probs)
-                comp_probs = np.where(comp_probs == 0, self.epsilon, comp_probs)
-                ref_probs /= np.sum(ref_probs)
-                comp_probs /= np.sum(comp_probs)
+                # # Apply anti-zero division adjustments
+                # ref_probs = np.where(ref_probs == 0, self.epsilon, ref_probs)
+                # comp_probs = np.where(comp_probs == 0, self.epsilon, comp_probs)
+                # ref_probs /= np.sum(ref_probs)
+                # comp_probs /= np.sum(comp_probs)
                 
-                # Element-wise contribution calculations
-                bin_psi_contrib = (comp_probs - ref_probs) * np.log(comp_probs / ref_probs)
-                total_psi = np.sum(bin_psi_contrib)
+                # # Element-wise contribution calculations
+                # bin_psi_contrib = (comp_probs - ref_probs) * np.log(comp_probs / ref_probs)
+                # total_psi = np.sum(bin_psi_contrib)
+                ref_probs, comp_probs, bin_psi_contrib, total_psi = psi_core_logic(col, is_numeric, edges, ref_data)
+                
                 
                 # Granular Appending
                 for idx, b_label in enumerate(bin_labels):
