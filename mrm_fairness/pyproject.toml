@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "mrm_fairness_auditor"
 version = "0.0.0"
 authors = [
-  { name="Rakesh", email="your.email@example.com" },
+  { name="Data Science Geek", email="datascienceassignmentsolution@gmail.com" },
 ]
 description = "Fairness Auditor for AI/ML models"
 readme = "README.md"
@@ -22,4 +22,4 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/yourusername/mrm_fairness"
+"Homepage" = "https://github.com/data-science-geek86/MRM_FAIRNESS_AUDITOR"
